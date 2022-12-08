@@ -20,11 +20,13 @@ library(neuralnet)
 
 
 # chapter3 data
+data(BostonHousing)
 boston_house <- BostonHousing %>%
   mutate_if(is.factor,as.numeric)
 ```
 
 ```{r chapter3_data}
+# just testing it out with some regression-type tasks
 n <- neuralnet(medv~crim+zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+b+lstat,
                data=boston_house,
                hidden=c(10,5),
@@ -38,20 +40,105 @@ plot(n, col.hidden="darkgreen",
      information=F,
      fill="lightblue")
 
+# format data
+boston_housing_data <- as.matrix(boston_house)
+set.seed(1975)
+# just splitting the data 70/30
+indices <- sample(2, nrow(boston_housing_data), replace = T, prob=c(.7, .3))
+training <- boston_housing_data[indices==1, 1:13]
+test <- boston_housing_data[indices==2, 1:13]
+trainingtarget <- boston_housing_data[indices==1, 14]
+testtarget <- boston_housing_data[indices==2, 14]
 ```
 
+```{r chapter3_model_train_and_test}
+training_means <- colMeans(training)
+train_sd <- apply(training, 2, sd)
+training_data <- scale(training, center = training_means, scale=train_sd)
+testing_data <- scale(test, center=training_means, scale=train_sd)
+# note that some large datasets will need data imputation and NA handling
 
+# the overall model looks like
+housing_model <- keras_model_sequential()
+housing_model %>%
+ layer_dense(units = 10, activation = 'relu', input_shape = c(13)) %>%
+ layer_dense(units = 5, activation = 'relu') %>%
+ layer_dense(units = 1)
 
-```{r cars}
-summary(cars)
+# compile it
+housing_model %>%
+  compile(loss='mse',
+          optimizer = 'rmsprop',
+          metrics = 'mse')
+
+# train the model
+boston_housing_fit_nn <- housing_model %>%
+  fit(training,
+      trainingtarget,
+      epochs=100,
+      batch_size=32,
+      validation_split=0.2)
+
+# evaluate and test it
+housing_model %>%
+  evaluate(test, testtarget)
+
+housing_predictions <- housing_model %>%
+  predict(test)
+
+prediction_df <- data.frame("housing_predictions" = housing_predictions[1:150], "target" = testtarget[1:150]) 
+
+ggplot(prediction_df, aes(x=housing_predictions, y=target)) +
+  geom_point() +
+  geom_smooth(method="lm", se=F) +
+  theme_bw()
+
+corr.test(prediction_df$housing_predictions, prediction_df$target)
+
+# test it with a deeper architecture
+model <- keras_model_sequential()
+model %>%
+ layer_dense(units = 100, activation = 'relu', input_shape = c(13)) %>%
+ layer_dropout(rate = 0.4) %>%
+ layer_dense(units = 50, activation = 'relu') %>%
+ layer_dropout(rate = 0.3) %>%
+ layer_dense(units = 20, activation = 'relu') %>%
+ layer_dropout(rate = 0.2) %>%
+ layer_dense(units = 1)
+
+# Compile model
+model %>% compile(loss = 'mse',
+ optimizer = 'rmsprop',
+ metrics = 'mae')
+# Fit model
+model_two <- model %>%
+ fit(training,
+ trainingtarget,
+ epochs = 100,
+ batch_size = 32,
+ validation_split = 0.2)
+plot(model_two)
+
+## evaluate and test with the much more complex model
+model %>% evaluate(test, testtarget)
+pred <- model %>% predict(test)
+pred_df <- data.frame("housing_predictions" = pred[1:150], "target" = testtarget[1:150]) 
+
+ggplot(pred_df, aes(x=housing_predictions, y=target)) +
+  geom_point() +
+  geom_smooth(method="lm", se=F) +
+  theme_bw()
+
+corr.test(pred_df$housing_predictions, prediction_df$target)
+# in general, consider modifying architecture or transforming input variable to see if there is improvement in performance
 ```
 
 ## Including Plots
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r some_image_classification}
+
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
