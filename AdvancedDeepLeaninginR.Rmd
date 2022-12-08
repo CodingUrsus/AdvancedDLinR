@@ -1,0 +1,57 @@
+---
+title: "AdvancedDeepLearninginR"
+author: "Austin Hammer"
+date: "2022-12-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r libs_and_data}
+library(tidyverse)
+library(keras)
+library(here)
+library(mlbench)
+library(psych)
+library(neuralnet)
+
+
+# chapter3 data
+boston_house <- BostonHousing %>%
+  mutate_if(is.factor,as.numeric)
+```
+
+```{r chapter3_data}
+n <- neuralnet(medv~crim+zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+b+lstat,
+               data=boston_house,
+               hidden=c(10,5),
+               linear.output=F,
+               lifesign = 'full',
+               rep=1)
+
+plot(n, col.hidden="darkgreen",
+     col.hidden.synapse='darkgreen',
+     show.weights=F,
+     information=F,
+     fill="lightblue")
+
+```
+
+
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
