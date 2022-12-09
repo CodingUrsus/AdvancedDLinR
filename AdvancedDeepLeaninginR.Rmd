@@ -138,6 +138,58 @@ corr.test(pred_df$housing_predictions, prediction_df$target)
 You can also embed plots, for example:
 
 ```{r some_image_classification}
+library(EBImage)
+# a couple of notes for resizing the microbiome "images"
+# 1. we won't really have to deal with image color channels, but usually need to
+# 2. EBImage has a simple function to resize images, resize()
+# 3. use to_categorical to one-hot encode
+
+# get the fashion mnist data, this dataset has 60k images (28x28), and 10k for testing, and the data is presplit
+fashion_mnist <- dataset_fashion_mnist()
+
+trainx <- fashion_mnist$train$x
+trainy <- fashion_mnist$train$y
+testx <- fashion_mnist$test$x
+testy <- fashion_mnist$test$y
+
+# will now reshape and resize the data
+trainy <- to_categorical(trainy, 10)
+testy <- to_categorical(testy, 10)
+
+
+# Model architecture
+model <- keras_model_sequential()
+model %>%
+ layer_conv_2d(filters = 32,
+ kernel_size = c(3,3),
+ activation = 'relu',
+ input_shape = c(28,28,1)) %>%
+ layer_conv_2d(filters = 64,
+ kernel_size = c(3,3),
+ activation = 'relu') %>%
+ layer_max_pooling_2d(pool_size = c(2,2)) %>%
+ layer_dropout(rate = 0.25) %>%
+ layer_flatten() %>%
+ layer_dense(units = 64, activation = 'relu') %>%
+ layer_dropout(rate = 0.25) %>%
+ layer_dense(units = 10, activation = 'softmax')
+
+# note that if you're working with a 3d image you'll need to use a 3d convolutional layer
+# Compile model
+model %>% compile(loss = 'categorical_crossentropy',
+ optimizer = optimizer_adadelta(),
+ metrics = 'accuracy')
+
+# Fit model
+model_one <- model %>% fit(trainx,
+ trainy,
+ epochs = 15,
+ batch_size = 128,
+ validation_split = 0.2)
+plot(model_one)
+
+
+
 
 ```
 
